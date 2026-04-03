@@ -51,8 +51,7 @@ export class TelegramNotifier implements Notifier {
     });
 
     if (!response.ok) {
-      const body = await response.text();
-      throw new Error(`Telegram notify failed (${response.status}): ${body.slice(0, 300)}`);
+      throw new Error(`Telegram notify failed (HTTP ${response.status})`);
     }
   }
 
@@ -83,8 +82,7 @@ export class TelegramNotifier implements Notifier {
     });
 
     if (!response.ok) {
-      const body = await response.text();
-      throw new Error(`Voice TTS failed (${response.status}): ${body.slice(0, 300)}`);
+      throw new Error(`Voice TTS failed (HTTP ${response.status})`);
     }
 
     const contentType = response.headers.get("content-type") || "";
@@ -116,8 +114,7 @@ export class TelegramNotifier implements Notifier {
     });
 
     if (!response.ok) {
-      const body = await response.text();
-      throw new Error(`Telegram voice notify failed (${response.status}): ${body.slice(0, 300)}`);
+      throw new Error(`Telegram voice notify failed (HTTP ${response.status})`);
     }
   }
 
@@ -149,6 +146,10 @@ export function createTelegramNotifierFromEnv(): TelegramNotifier | null {
 
   const voiceEnabled = boolEnv("TELEGRAM_VOICE_ENABLED", false);
   const ttsUrl = process.env["VOICE_TTS_URL"]?.trim();
+  if (voiceEnabled && !ttsUrl) {
+    throw new Error("VOICE_TTS_URL is required when TELEGRAM_VOICE_ENABLED=true");
+  }
+
   const voiceConfig: VoiceConfig | null = voiceEnabled && ttsUrl
     ? {
         enabled: true,

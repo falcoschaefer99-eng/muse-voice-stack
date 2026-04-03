@@ -6,6 +6,14 @@
   <img src="https://readme-typing-svg.demolab.com?font=Montserrat&weight=500&size=24&pause=1100&color=D4AF37&center=true&vCenter=true&width=1000&lines=Telegram-first+voice+runtime+for+your+AI+workflow;Kokoro+TTS+(54+voices)+for+outbound+voice+notes;faster-whisper+for+local%2C+OpenAI-compatible+transcription" alt="Narrative tagline" />
 </p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/Transport-Telegram-D4AF37?style=flat" alt="Telegram transport" />
+  <img src="https://img.shields.io/badge/TTS-Kokoro%20(54%20voices)-000000?style=flat" alt="Kokoro TTS" />
+  <img src="https://img.shields.io/badge/STT-faster--whisper-000000?style=flat" alt="faster-whisper STT" />
+  <img src="https://img.shields.io/badge/Memory%20Sink-file%20%7C%20webhook%20%7C%20mcp-D4AF37?style=flat" alt="Memory sink modes" />
+  <img src="https://img.shields.io/badge/Node-20%2B-000000?style=flat" alt="Node 20+" />
+</p>
+
 Your AI doesn’t just think — it speaks, listens, and remembers.  
 This is a Telegram-first voice layer that sends voice updates out, ingests voice notes in, and stores transcripts into **your** memory backend.
 
@@ -47,6 +55,7 @@ npm run build
 ```
 
 By default transcripts are saved locally (`MEMORY_SINK_MODE=file`), so no MUSE dependency is required.
+Set `TELEGRAM_CHAT_ID` to lock ingestion to your chat (recommended default).
 
 Start STT sidecar:
 

@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "bridge": "node dist/telegram-voice-bridge.js",
-    "dev:bridge": "tsx src/telegram-voice-bridge.ts",
-    "demo:notify": "tsx src/demo-notify.ts",
+    "bridge": "node --env-file=.env dist/telegram-voice-bridge.js",
+    "dev:bridge": "node --env-file=.env --import tsx src/telegram-voice-bridge.ts",
+    "demo:notify": "node --env-file=.env --import tsx src/demo-notify.ts",
     "stt:faster-whisper": "python3 stt/faster_whisper_server.py"
   },
   "engines": {

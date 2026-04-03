@@ -11,6 +11,7 @@
    - Polls Telegram `getUpdates` for inbound voice messages.
    - Downloads voice note file.
    - Sends audio to OpenAI-compatible STT endpoint.
+   - Defaults to chat allowlist mode via `TELEGRAM_CHAT_ID`.
    - Persists transcript via configurable memory sink.
 
 3. **Memory sink adapter** (`src/memory-sink.ts`)

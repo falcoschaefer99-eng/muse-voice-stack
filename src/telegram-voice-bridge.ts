@@ -12,6 +12,7 @@ interface TelegramMessage {
   message_id: number;
   date: number;
   chat: { id: number | string };
+  from?: { is_bot?: boolean };
   voice?: TelegramVoice;
 }
 
@@ -22,11 +23,15 @@ interface TelegramUpdate {
 
 interface UpdatesResponse {
   ok: boolean;
+  error_code?: number;
+  description?: string;
   result?: TelegramUpdate[];
 }
 
 interface FileResponse {
   ok: boolean;
+  error_code?: number;
+  description?: string;
   result?: { file_path?: string };
 }
 
@@ -93,11 +98,25 @@ async function telegramPostJson<T>(
     body: JSON.stringify(payload),
     signal: AbortSignal.timeout(timeoutMs),
   });
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Telegram ${method} failed (${response.status}): ${body.slice(0, 300)}`);
+  let json: unknown;
+  try {
+    json = await response.json();
+  } catch {
+    throw new Error(`Telegram ${method} returned non-JSON response`);
   }
-  return (await response.json()) as T;
+
+  if (!response.ok) {
+    throw new Error(`Telegram ${method} HTTP ${response.status}`);
+  }
+
+  const payloadJson = json as { ok?: boolean; error_code?: number; description?: string };
+  if (payloadJson.ok !== true) {
+    const code = payloadJson.error_code ? ` ${payloadJson.error_code}` : "";
+    const desc = payloadJson.description ? ` (${payloadJson.description})` : "";
+    throw new Error(`Telegram ${method} API error${code}${desc}`);
+  }
+
+  return json as T;
 }
 
 async function downloadTelegramFile(botToken: string, filePath: string, timeoutMs: number): Promise<Uint8Array> {
@@ -105,8 +124,7 @@ async function downloadTelegramFile(botToken: string, filePath: string, timeoutM
     signal: AbortSignal.timeout(timeoutMs),
   });
   if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Telegram file download failed (${response.status}): ${body.slice(0, 300)}`);
+    throw new Error(`Telegram file download failed (HTTP ${response.status})`);
   }
   return new Uint8Array(await response.arrayBuffer());
 }
@@ -133,8 +151,7 @@ async function transcribeVoice(
     signal: AbortSignal.timeout(timeoutMs),
   });
   if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`STT failed (${response.status}): ${body.slice(0, 300)}`);
+    throw new Error(`STT failed (HTTP ${response.status})`);
   }
 
   const payload = (await response.json()) as { text?: string; transcript?: string };
@@ -161,12 +178,14 @@ async function handleUpdate(
     sttModel: string;
     timeoutMs: number;
     sendAck: boolean;
+    ignoreBotMessages: boolean;
     tenant: string;
     memory: MemorySink;
   }
 ): Promise<void> {
   const message = update.message;
   if (!message?.voice) return;
+  if (cfg.ignoreBotMessages && message.from?.is_bot) return;
 
   const messageChatId = String(message.chat.id);
   if (cfg.chatId && messageChatId !== cfg.chatId) return;
@@ -204,6 +223,8 @@ async function main(): Promise<void> {
   const sttUrl = requiredEnv("VOICE_STT_URL");
   const tenant = optionalEnv("VOICE_BRIDGE_TENANT", "rainer");
   const chatId = process.env["TELEGRAM_CHAT_ID"]?.trim() || undefined;
+  const allowAnyChat = boolEnv("VOICE_BRIDGE_ALLOW_ANY_CHAT", false);
+  const ignoreBotMessages = boolEnv("VOICE_BRIDGE_IGNORE_BOT_MESSAGES", true);
   const sttApiKey = process.env["VOICE_STT_API_KEY"]?.trim();
   const sttModel = optionalEnv("VOICE_STT_MODEL", "whisper-1");
   const timeoutMs = intEnv("VOICE_BRIDGE_TIMEOUT_MS", 30_000);
@@ -211,11 +232,15 @@ async function main(): Promise<void> {
   const sendAck = boolEnv("VOICE_BRIDGE_SEND_ACK", true);
   const statePath = optionalEnv("VOICE_BRIDGE_STATE_PATH", "./state/telegram-voice-bridge.json");
 
+  if (!chatId && !allowAnyChat) {
+    throw new Error("TELEGRAM_CHAT_ID is required unless VOICE_BRIDGE_ALLOW_ANY_CHAT=true");
+  }
+
   const memory = createMemorySinkFromEnv(timeoutMs);
   const state = loadState(statePath);
 
   console.log(
-    `[voice-bridge] starting (tenant=${tenant}, memory=${memory.kind}, poll=${pollSeconds}s, ack=${sendAck})`
+    `[voice-bridge] starting (tenant=${tenant}, memory=${memory.kind}, poll=${pollSeconds}s, ack=${sendAck}, allow_any_chat=${allowAnyChat})`
   );
 
   while (true) {
@@ -228,22 +253,26 @@ async function main(): Promise<void> {
 
       const rows = Array.isArray(updates.result) ? updates.result : [];
       for (const row of rows) {
-        await handleUpdate(row, {
-          botToken,
-          chatId,
-          sttUrl,
-          sttApiKey,
-          sttModel,
-          timeoutMs,
-          sendAck,
-          tenant,
-          memory,
-        });
-        state.offset = Math.max(state.offset, row.update_id);
-      }
-
-      if (rows.length > 0) {
-        saveState(statePath, state);
+        try {
+          await handleUpdate(row, {
+            botToken,
+            chatId,
+            sttUrl,
+            sttApiKey,
+            sttModel,
+            timeoutMs,
+            sendAck,
+            ignoreBotMessages,
+            tenant,
+            memory,
+          });
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(`[voice-bridge] update ${row.update_id} failed: ${msg}`);
+        } finally {
+          state.offset = Math.max(state.offset, row.update_id);
+          saveState(statePath, state);
+        }
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);

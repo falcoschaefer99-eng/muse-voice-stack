@@ -79,8 +79,7 @@ class WebhookMemorySink implements MemorySink {
     });
 
     if (!response.ok) {
-      const body = await response.text();
-      throw new Error(`Memory webhook failed (${response.status}): ${body.slice(0, 300)}`);
+      throw new Error(`Memory webhook failed (HTTP ${response.status})`);
     }
   }
 }
@@ -110,4 +109,3 @@ export function createMemorySinkFromEnv(timeoutMs: number): MemorySink {
 
   throw new Error(`Unsupported MEMORY_SINK_MODE: ${mode} (expected file|mcp|webhook)`);
 }
-

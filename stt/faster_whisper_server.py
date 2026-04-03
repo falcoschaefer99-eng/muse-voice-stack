@@ -5,12 +5,13 @@ Exposes:
   - GET  /healthz
   - POST /v1/audio/transcriptions
 
-Designed as a drop-in STT backend for runner/src/telegram-voice-bridge.ts.
+Designed as a drop-in STT backend for src/telegram-voice-bridge.ts.
 """
 
 from __future__ import annotations
 
 import hmac
+import ipaddress
 import os
 import tempfile
 from pathlib import Path
@@ -63,9 +64,28 @@ MODEL_ALIASES: dict[str, str] = {
     "whisper-1": DEFAULT_MODEL,
 }
 
+ALLOWED_MODELS_RAW = os.getenv("FW_ALLOWED_MODELS", "").strip()
+ALLOW_ANY_MODEL = ALLOWED_MODELS_RAW == "*"
+if ALLOW_ANY_MODEL:
+    ALLOWED_MODELS: set[str] = set()
+elif ALLOWED_MODELS_RAW:
+    ALLOWED_MODELS = {token.strip() for token in ALLOWED_MODELS_RAW.split(",") if token.strip()}
+else:
+    ALLOWED_MODELS = {DEFAULT_MODEL, "whisper-1", "tiny", "base", "small", "medium", "large-v3"}
+
 MODEL_CACHE: dict[str, WhisperModel] = {}
 
 app = FastAPI(title="faster-whisper OpenAI-compatible server", version="0.1.0")
+
+
+def _is_loopback_host(host: str) -> bool:
+    token = host.strip().lower()
+    if token in {"localhost", "127.0.0.1", "::1"}:
+        return True
+    try:
+        return ipaddress.ip_address(token).is_loopback
+    except ValueError:
+        return False
 
 
 def _auth(authorization: Optional[str]) -> None:
@@ -80,9 +100,18 @@ def _auth(authorization: Optional[str]) -> None:
 
 def _resolve_model(requested: Optional[str]) -> str:
     if not requested or not requested.strip():
-        return DEFAULT_MODEL
-    token = requested.strip()
-    return MODEL_ALIASES.get(token, token)
+        resolved = DEFAULT_MODEL
+    else:
+        token = requested.strip()
+        resolved = MODEL_ALIASES.get(token, token)
+
+    if not ALLOW_ANY_MODEL and resolved not in ALLOWED_MODELS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported model '{resolved}'. Set FW_ALLOWED_MODELS to allow it.",
+        )
+
+    return resolved
 
 
 def _get_model(model_name: str) -> WhisperModel:
@@ -106,6 +135,8 @@ def _get_model(model_name: str) -> WhisperModel:
 
 @app.on_event("startup")
 def _startup() -> None:
+    if not API_KEY and not _is_loopback_host(HOST):
+        raise RuntimeError("FW_API_KEY is required when FW_HOST is non-loopback")
     if PRELOAD_MODEL:
         _get_model(DEFAULT_MODEL)
 
@@ -114,9 +145,12 @@ def _startup() -> None:
 def healthz() -> dict[str, Any]:
     return {
         "ok": True,
+        "auth_required": bool(API_KEY),
         "default_model": DEFAULT_MODEL,
         "device": DEVICE,
         "compute_type": COMPUTE_TYPE,
+        "allow_any_model": ALLOW_ANY_MODEL,
+        "allowed_models": sorted(ALLOWED_MODELS) if not ALLOW_ANY_MODEL else ["*"],
         "preloaded_models": sorted(MODEL_CACHE.keys()),
     }
 
@@ -131,19 +165,24 @@ async def transcriptions(
     authorization: Optional[str] = Header(default=None),
 ):
     _auth(authorization)
-
-    raw = await file.read()
-    if not raw:
-        raise HTTPException(status_code=400, detail="Uploaded file is empty")
-    if len(raw) > MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=413, detail=f"Uploaded file exceeds {MAX_UPLOAD_MB}MB limit")
-
-    suffix = Path(file.filename or "audio.ogg").suffix or ".ogg"
-    with tempfile.NamedTemporaryFile(prefix="fw_", suffix=suffix, delete=False) as tmp:
-        tmp_path = tmp.name
-        tmp.write(raw)
-
+    tmp_path: Optional[str] = None
     try:
+        suffix = Path(file.filename or "audio.ogg").suffix or ".ogg"
+        with tempfile.NamedTemporaryFile(prefix="fw_", suffix=suffix, delete=False) as tmp:
+            tmp_path = tmp.name
+            total = 0
+            while True:
+                chunk = await file.read(1024 * 1024)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total > MAX_UPLOAD_BYTES:
+                    raise HTTPException(status_code=413, detail=f"Uploaded file exceeds {MAX_UPLOAD_MB}MB limit")
+                tmp.write(chunk)
+
+        if total == 0:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty")
+
         resolved_model = _resolve_model(model)
         whisper = _get_model(resolved_model)
 
@@ -191,10 +230,11 @@ async def transcriptions(
             detail="Unsupported response_format. Supported: text, json, simple_json, verbose_json",
         )
     finally:
-        try:
-            os.remove(tmp_path)
-        except OSError:
-            pass
+        if tmp_path is not None:
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
 
 
 if __name__ == "__main__":

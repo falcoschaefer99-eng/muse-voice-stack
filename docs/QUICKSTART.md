@@ -38,7 +38,7 @@ python stt/faster_whisper_server.py
 
 ```bash
 npm run build
-node dist/telegram-voice-bridge.js
+npm run bridge
 ```
 
 ## 6) Send one demo notification (+ voice note if enabled)
