@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.venv/
+.env
+state/
+voice-stack/
+__pycache__/
+*.pyc
+.DS_Store

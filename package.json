@@ -1,0 +1,21 @@
+{
+  "name": "muse-voice-stack",
+  "version": "0.1.0",
+  "description": "Standalone Telegram voice experience for MUSE Brain (notifications + TTS + STT bridge)",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "bridge": "node dist/telegram-voice-bridge.js",
+    "dev:bridge": "tsx src/telegram-voice-bridge.ts",
+    "demo:notify": "tsx src/demo-notify.ts",
+    "stt:faster-whisper": "python3 stt/faster_whisper_server.py"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.8.3"
+  }
+}
