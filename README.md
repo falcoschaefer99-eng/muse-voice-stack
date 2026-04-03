@@ -6,8 +6,6 @@
   <img src="https://readme-typing-svg.demolab.com?font=Montserrat&weight=500&size=24&pause=1100&color=D4AF37&center=true&vCenter=true&width=1000&lines=Telegram-first+voice+runtime+for+MUSE+Brain;Kokoro+TTS+(54+voices)+for+outbound+voice+notes;faster-whisper+for+local%2C+OpenAI-compatible+transcription" alt="Narrative tagline" />
 </p>
 
-# MUSE Telegram Voice Stack
-
 Your AI doesn’t just think — it speaks, listens, and remembers.  
 This is a Telegram-first voice layer that sends voice updates out, ingests voice notes in, and stores transcripts into brain memory.
 
