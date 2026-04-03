@@ -1,17 +1,40 @@
-# muse-voice-stack
+<p align="center">
+  <img src="docs/images/muse-telegram-voice-stack-banner.png" alt="MUSE Telegram Voice Stack banner" width="100%" />
+</p>
 
-![MUSE Voice Stack banner](docs/images/muse-voice-stack-banner.png)
+<p align="center">
+  <img src="https://readme-typing-svg.demolab.com?font=Montserrat&weight=500&size=24&pause=1100&color=D4AF37&center=true&vCenter=true&width=1000&lines=Telegram-first+voice+runtime+for+MUSE+Brain;Kokoro+TTS+(54+voices)+for+outbound+voice+notes;faster-whisper+for+local%2C+OpenAI-compatible+transcription" alt="Narrative tagline" />
+</p>
 
-Standalone Telegram + voice layer for MUSE Brain:
+# MUSE Telegram Voice Stack
 
-- Telegram transport (outbound + inbound)
-- Optional voice-note TTS (Kokoro via MUSE TTS or your own endpoint)
-- Inbound voice-note transcription (faster-whisper sidecar or any OpenAI-compatible STT)
-- Transcript persistence to brain memory (`mind_observe` whisper mode)
+Your AI doesn’t just think — it speaks, listens, and remembers.  
+This is a Telegram-first voice layer that sends voice updates out, ingests voice notes in, and stores transcripts into brain memory.
 
-Default voice persona mapping:
+## What it includes
+
+- **Telegram transport** (outbound + inbound)
+- **Kokoro TTS** via MUSE TTS (**54 voices**) for outbound voice notes
+- **faster-whisper STT** for inbound voice transcription (local, fast, private-friendly)
+- **Brain persistence** via `mind_observe` in whisper mode
+
+Default persona mapping:
 - `rainer -> lewis`
 - `companion -> onyx`
+
+### What is Kokoro here?
+Kokoro is the voice engine behind MUSE TTS. You get **54 voices** and can pick a default persona voice without changing core logic.
+
+### What is faster-whisper here?
+`faster-whisper` is a lightweight speech-to-text server you can run locally.  
+In this repo it exposes an OpenAI-compatible transcription endpoint, so the bridge can call it like any standard STT API.
+
+## Vibe-coder friendly (entry level)
+
+- You can run this with copy/paste setup + `.env`.
+- No need to train models.
+- Start local with sane defaults, then swap providers later.
+- Works even if you keep your own stack and only want the Telegram+voice piece.
 
 ## Quick start
 
