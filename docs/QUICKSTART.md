@@ -10,8 +10,14 @@ npm install
 
 ```bash
 cp .env.example .env
-# fill TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, BRAIN_URL, BRAIN_API_KEY
+# fill TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID
 ```
+
+Pick transcript sink in `.env`:
+
+- easiest: `MEMORY_SINK_MODE=file` (default, local NDJSON file)
+- your backend: `MEMORY_SINK_MODE=webhook` + `MEMORY_WEBHOOK_URL`
+- MUSE adapter: `MEMORY_SINK_MODE=mcp` + `BRAIN_URL` + `BRAIN_API_KEY`
 
 ## 3) Optional: bootstrap MUSE TTS repo
 

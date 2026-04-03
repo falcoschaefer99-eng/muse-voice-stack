@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import { BrainClient } from "./brain-client.js";
+import { createMemorySinkFromEnv, type MemorySink } from "./memory-sink.js";
 
 interface TelegramVoice {
   file_id: string;
@@ -162,7 +162,7 @@ async function handleUpdate(
     timeoutMs: number;
     sendAck: boolean;
     tenant: string;
-    brain: BrainClient;
+    memory: MemorySink;
   }
 ): Promise<void> {
   const message = update.message;
@@ -178,10 +178,14 @@ async function handleUpdate(
   const audio = await downloadTelegramFile(cfg.botToken, filePath, cfg.timeoutMs);
   const transcript = await transcribeVoice(cfg.sttUrl, cfg.sttApiKey, audio, cfg.timeoutMs, cfg.sttModel);
 
-  await cfg.brain.callToolJson("mind_observe", {
-    mode: "whisper",
-    content: transcript,
+  await cfg.memory.persist({
+    transcript,
     tags: ["telegram", "voice", "transcript"],
+    source: "telegram",
+    chat_id: messageChatId,
+    message_id: message.message_id,
+    received_at: new Date(message.date * 1000).toISOString(),
+    tenant: cfg.tenant,
   });
 
   if (cfg.sendAck) {
@@ -198,8 +202,6 @@ async function handleUpdate(
 async function main(): Promise<void> {
   const botToken = requiredEnv("TELEGRAM_BOT_TOKEN");
   const sttUrl = requiredEnv("VOICE_STT_URL");
-  const brainUrl = requiredEnv("BRAIN_URL");
-  const brainApiKey = requiredEnv("BRAIN_API_KEY");
   const tenant = optionalEnv("VOICE_BRIDGE_TENANT", "rainer");
   const chatId = process.env["TELEGRAM_CHAT_ID"]?.trim() || undefined;
   const sttApiKey = process.env["VOICE_STT_API_KEY"]?.trim();
@@ -209,10 +211,12 @@ async function main(): Promise<void> {
   const sendAck = boolEnv("VOICE_BRIDGE_SEND_ACK", true);
   const statePath = optionalEnv("VOICE_BRIDGE_STATE_PATH", "./state/telegram-voice-bridge.json");
 
-  const brain = new BrainClient(brainUrl, brainApiKey, tenant);
+  const memory = createMemorySinkFromEnv(timeoutMs);
   const state = loadState(statePath);
 
-  console.log(`[voice-bridge] starting (tenant=${tenant}, poll=${pollSeconds}s, ack=${sendAck})`);
+  console.log(
+    `[voice-bridge] starting (tenant=${tenant}, memory=${memory.kind}, poll=${pollSeconds}s, ack=${sendAck})`
+  );
 
   while (true) {
     try {
@@ -233,7 +237,7 @@ async function main(): Promise<void> {
           timeoutMs,
           sendAck,
           tenant,
-          brain,
+          memory,
         });
         state.offset = Math.max(state.offset, row.update_id);
       }
