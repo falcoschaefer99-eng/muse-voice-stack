@@ -1,10 +1,12 @@
 # muse-voice-stack
 
-Standalone voice layer for MUSE Brain:
+![MUSE Voice Stack banner](docs/images/muse-voice-stack-banner.png)
 
-- Telegram notifications
-- Optional Telegram voice-note TTS
-- Telegram inbound voice-note transcription
+Standalone Telegram + voice layer for MUSE Brain:
+
+- Telegram transport (outbound + inbound)
+- Optional voice-note TTS (Kokoro via MUSE TTS or your own endpoint)
+- Inbound voice-note transcription (faster-whisper sidecar or any OpenAI-compatible STT)
 - Transcript persistence to brain memory (`mind_observe` whisper mode)
 
 Default voice persona mapping:
