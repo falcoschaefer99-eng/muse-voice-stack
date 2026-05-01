@@ -1,21 +1,45 @@
 {
-  "name": "muse-voice-stack",
-  "version": "0.1.0",
-  "description": "Standalone Telegram voice experience for MUSE Brain (notifications + TTS + STT bridge)",
-  "type": "module",
-  "scripts": {
-    "build": "tsc",
-    "bridge": "node --env-file=.env dist/telegram-voice-bridge.js",
-    "dev:bridge": "node --env-file=.env --import tsx src/telegram-voice-bridge.ts",
-    "demo:notify": "node --env-file=.env --import tsx src/demo-notify.ts",
-    "stt:faster-whisper": "python3 stt/faster_whisper_server.py"
-  },
-  "engines": {
-    "node": ">=20"
-  },
-  "devDependencies": {
-    "@types/node": "^22.0.0",
-    "tsx": "^4.19.2",
-    "typescript": "^5.8.3"
-  }
+	"name": "muse-voice-stack",
+	"version": "0.1.0",
+	"description": "Standalone Telegram + TTS + STT voice interface for MUSE Brain.",
+	"keywords": [
+		"muse-brain",
+		"voice-agents",
+		"telegram-bot",
+		"telegram",
+		"tts",
+		"stt",
+		"text-to-speech",
+		"speech-to-text",
+		"ai-voice",
+		"mcp",
+		"typescript",
+		"self-hosted",
+		"local-first"
+	],
+	"homepage": "https://github.com/falcoschaefer99-eng/muse-voice-stack",
+	"bugs": {
+		"url": "https://github.com/falcoschaefer99-eng/muse-voice-stack/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/falcoschaefer99-eng/muse-voice-stack.git"
+	},
+	"author": "Falco Schäfer / The Funkatorium",
+	"type": "module",
+	"scripts": {
+		"build": "tsc",
+		"bridge": "node --env-file=.env dist/telegram-voice-bridge.js",
+		"dev:bridge": "node --env-file=.env --import tsx src/telegram-voice-bridge.ts",
+		"demo:notify": "node --env-file=.env --import tsx src/demo-notify.ts",
+		"stt:faster-whisper": "python3 stt/faster_whisper_server.py"
+	},
+	"engines": {
+		"node": ">=20"
+	},
+	"devDependencies": {
+		"@types/node": "^22.0.0",
+		"tsx": "^4.19.2",
+		"typescript": "^5.8.3"
+	}
 }
